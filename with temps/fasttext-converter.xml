@@ -1,0 +1,11 @@
+<tool id='fasttext-converter' version='1.0.0'>
+  <description>A Converter creating a temporary file formatted for fasttext models</description>
+  <command>python3 $__tool_directory__/fasttext-converter.py -i $input -l $labels</command>
+  <inputs>
+    <param name='input' type='data' format='json'/>
+    <param name='labels' format='text'/>
+  </inputs>
+  <outputs>
+    <data name='output' format='text' />
+  </outputs>
+</tool>
