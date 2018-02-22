@@ -26,13 +26,12 @@ def input_log_table(info):
 
 @app.route('/convert/pos-neg', methods=['POST','GET'])
 def execute():
-    pos = request.form['pos']
+    pos = request.form.get('pos', default=None)
     if pos is None:
         return "ERROR: No positive examples file was given\n"
-    
     json_pos = json.loads(pos)
 
-    neg = request.form['neg']
+    neg = request.form.get('neg', default=None)
     if neg is None:
         return "ERROR: No negative examples file was given\n"
 
