@@ -1,82 +1,46 @@
-import json
 import tempfile
-from lif.discriminators import Uri
-from lif.lif import *
+import json
+from flask import Flask
+import sys
+
+args = sys.argv
+app = Flask(__name__)
+
+def filter_blanks(dataset):
+    return [val for val in dataset if val is not None and val != '']
+
+def getfield(dataset, field):
+    if isinstance(dataset, dict):
+        index = dataset['fields'].index(field)
+        return filter_blanks([row[index] for row in dataset['values']])
+    else:
+        return filter_blanks([row[field] for row in dataset])
 
 
-class Converter:
+@app.route('/convert/')
+def execute():
+    if "-i" not in args:
+    	return "ERROR: No input file was given"
 
-    def __init__(self):
-        self.metadata = generate_metadata()
-
-    def generate_metadata():
-        metadata = {}
-        metadata['name'] = 'Converter'
-        metadata['description'] = "A converter creating temporary fasttext files from json files."
-        ## TODO: version
-        metadata['version'] = '0.0.1'
-        metadata['vendor'] = 'http://www.lappsgrid.org'
-        metadata['license'] = Uri.APACHE2
-
-        requires = {}
-        requires['format'] = Uri.JSON
-        requires['encoding'] = "UTF-8"
-
-        produces = {}
-        produces['format'] = Uri.TEXT
-        produces['encoding'] = "UTF-8"
-
-        metadata['requires'] = requires
-        metadata['produces'] = produces
-
-        data = Data(Uri.META, metadata)
-        return data.as_pretty_json()
-
-    def getMetadata(self):
-        return self.metadata
+	input_path = args[args.index("-i")+1]
+	with open(input_path, 'r') as f:
+		json_data = json.load(f)
 
 
-    def filter_blanks(dataset):
-        return [val for val in dataset if val is not None and val != '']
+    if "-l" not in args:
+        return "ERROR: A valid list of labels must be given, in order to create appropriate temporary files for fasttext"
 
-    def getfield(dataset, field):
-        if isinstance(dataset, dict):
-            index = dataset['fields'].index(field)
-            return filter_blanks([row[index] for row in dataset['values']])
-        else:
-            return filter_blanks([row[field] for row in dataset])
+	labels = args[args.index("-l")+1].split(',')
 
+    all_labels = []
 
-    def execute(self, input):
-        Data data = Serializer.parse(input, Data)
+    for each in labels:
+        label_data = getfield(json_data, each)
+        all_labels.append(('__label__%s %s' % ex) for ex in label_data)
 
-        ## Return ERRORS back
-        if data.discriminator == Uri.ERROR:
-            return input
-            
+    return '\n'.join(all_labels)
 
-        ## If the input discriminator is wrong, return an error
-        elif data.discriminator != Uri.JSON
-            return Data(Uri.ERROR, "Invalid input").as_json()
+if __name__ == '__main__':
+    app.run(debug=True)
 
-        jsonData = json.load(data.payload)
-
-        lab = data.get_parameter('labels')
-
-        if lab == None:
-            return Data(Uri.ERROR, "A valid list of labels must be given, in order to create appropriate temporary files for fasttext").as_json()
-
-        labels = lab.split(',')
-
-        allLabels = []
-
-        for each in labels:
-            labelData = getfield(jsonData, each)
-            allLabels.append(('__label__%s %s' % ex) for ex in labelData)
-
-        tmp, filename = tempfile.mkstemp()
-
-        with open(tmp, 'w') as f:
-            f.write('\n'.join(allLabels))
-
-        return Data(Uri.TEXT, filename)
+execute()
